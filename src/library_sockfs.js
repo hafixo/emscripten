@@ -173,10 +173,19 @@ mergeInto(LibraryManager.library, {
               }
             }
 
+            sock.wsproxy = false;
+
             if (url === 'ws://' || url === 'wss://') { // Is the supplied URL config just a prefix, if so complete it.
               var parts = addr.split('/');
               url = url + parts[0] + ":" + port + "/" + parts.slice(1).join('/');
             }
+            else if (url.lastIndexOf('wsproxy://', 0) === 0) { // Special case for wsproxy
+              var protocol = 't';
+              if (sock.type == {{{ cDefine('SOCK_DGRAM') }}} ) protocol = 'u'; // limited udp like under nat
+              url = url.replace('wsproxy://','ws://') + protocol + '/' + addr.split('/')[0]+':'+port;
+              sock.wsproxy = true
+            }
+
 
             // Make the WebSocket subprotocol (Sec-WebSocket-Protocol) default to binary if no configuration is set.
             var subProtocols = '{{{ WEBSOCKET_SUBPROTOCOL }}}'; // The default value is 'binary'
@@ -230,7 +239,7 @@ mergeInto(LibraryManager.library, {
         // if this is a bound dgram socket, send the port number first to allow
         // us to override the ephemeral port reported to us by remotePort on the
         // remote end.
-        if (sock.type === {{{ cDefine('SOCK_DGRAM') }}} && typeof sock.sport !== 'undefined') {
+        if (!sock.wsproxy && sock.type === {{{ cDefine('SOCK_DGRAM') }}} && typeof sock.sport !== 'undefined') {
 #if SOCKET_DEBUG
           Module.print('websocket queuing port message (port ' + sock.sport + ')');
 #endif
